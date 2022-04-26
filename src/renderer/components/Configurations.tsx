@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { Container, Row, Col, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, ListGroup, Form, Button } from 'react-bootstrap';
 import { LazyContext } from 'renderer/context/LazyContextProvider';
 import ConfigList from './configs/ConfigList';
 
@@ -18,9 +18,14 @@ const Configurations = () => {
   const renderConfigComponent = (eachInput: object, index: number) => {
     return (
       <>
-        <div>{eachInput.name}</div>
-        <div>{eachInput.type}</div>
-        <div>{eachInput.value}</div>
+        <Form.Group className="mb-3" controlId={eachInput.name}>
+          <Form.Label>{eachInput.title}</Form.Label>
+          <Form.Control
+            type={eachInput.type}
+            placeholder={eachInput.placeHolder}
+            value={eachInput.value}
+          />
+        </Form.Group>
       </>
     );
   };
@@ -48,7 +53,14 @@ const Configurations = () => {
               <div>Empty</div>
             </>
           ) : (
-            renderConfigDetail(configDetail.config)
+            <>
+              <Form>
+                {renderConfigDetail(configDetail.config)}
+                <Button variant="primary" type="submit">
+                  Save
+                </Button>
+              </Form>
+            </>
           )}
         </Col>
       </Row>
