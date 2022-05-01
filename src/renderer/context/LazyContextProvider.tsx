@@ -9,6 +9,7 @@ const LazyContextProvider = (props) => {
   const [triggerReload, setTriggerReload] = useState(0);
   const [unSaved, setUnSaved] = useState(false);
   const [triggerSave, setTriggerSave] = useState(0);
+  const [filterScript, setFilterScript] = useState('all');
   return (
     <LazyContext.Provider
       value={{
@@ -24,6 +25,8 @@ const LazyContextProvider = (props) => {
         setUnSaved,
         triggerSave,
         setTriggerSave,
+        filterScript,
+        setFilterScript,
       }}
     >
       {props.children}

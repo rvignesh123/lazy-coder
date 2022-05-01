@@ -108,7 +108,10 @@ ipcMain.on('save-config', async (event, request) => {
     configDetail.config,
     request.formData
   );
-  const status: boolean = writeFile(targetFile, { config: updatedList });
+  const status: boolean = writeFile(targetFile, {
+    config: updatedList,
+    environment: request.environment,
+  });
   event.reply('save-config', status);
 });
 ipcMain.on('create-config', async (event, request) => {

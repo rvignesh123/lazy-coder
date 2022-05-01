@@ -45,31 +45,32 @@ const CreateNewConfig = () => {
     if (form.checkValidity() === false) {
       event.preventDefault();
       event.stopPropagation();
-    }
-
-    setValidated(true);
-    const request = {
-      name,
-      config: scripts[scriptIndex].config,
-      script: scripts[scriptIndex].name,
-    };
-    if (!request.config) {
-      request.config = scripts[0].config;
-    }
-
-    window.electron.ipcRenderer.once('create-config', (saveStatus) => {
-      setStatus(saveStatus);
-      if (saveStatus) {
-        handleClose();
-        setStatus(true);
-        setName('');
-        setScriptIndex(0);
-        setTriggerReload(triggerReload + 1);
+      setValidated(true);
+    } else {
+      setValidated(true);
+      const request = {
+        name,
+        config: scripts[scriptIndex].config,
+        script: scripts[scriptIndex].name,
+      };
+      if (!request.config) {
+        request.config = scripts[0].config;
       }
-    });
-    window.electron.ipcRenderer.createConfigIpc(request);
-    event.preventDefault();
-    event.stopPropagation();
+
+      window.electron.ipcRenderer.once('create-config', (saveStatus) => {
+        setStatus(saveStatus);
+        if (saveStatus) {
+          handleClose();
+          setStatus(true);
+          setName('');
+          setScriptIndex(0);
+          setTriggerReload(triggerReload + 1);
+        }
+      });
+      window.electron.ipcRenderer.createConfigIpc(request);
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
   return (
     <Modal show={showCreateConfig} onHide={handleClose} animation={false}>
@@ -81,7 +82,7 @@ const CreateNewConfig = () => {
           <Form.Group className="mb-3" controlId="scriptSelect">
             <Form.Label>Select Script</Form.Label>
             <Form.Select
-              aria-label="Default select example"
+              aria-label="Script Select"
               value={scriptIndex}
               onChange={handleScriptSelect}
             >
