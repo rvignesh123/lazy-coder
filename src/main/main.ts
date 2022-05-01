@@ -33,13 +33,15 @@ const LAZY_CONFIG_SCRIPTS = `${LAZY_CODER_DIR}/scripts.json`;
 const LAZY_CONFIG_SCRIPTS_BASE = `${LAZY_CODER_DIR}/base`;
 const LAZY_CONFIG_DIR = `${LAZY_CODER_DIR}/configs`;
 
-const getConfigList = (script) => {
+const getConfigList = (script, exceptName) => {
   const data = fs.readFileSync(LAZY_CONFIG, { encoding: 'utf8', flag: 'r' });
   const configs = JSON.parse(data).config;
   const filtered: any[] = [];
   configs.forEach((element) => {
     if (script === 'all' || element.script === script) {
-      filtered.push(element);
+      if (!(exceptName && element.name === exceptName)) {
+        filtered.push(element);
+      }
     }
   });
   return filtered;
@@ -89,7 +91,7 @@ ipcMain.on('ipc-example', async (event, arg) => {
 });
 
 ipcMain.on('get-config-list', async (event, script) => {
-  event.reply('get-config-list', getConfigList(script));
+  event.reply('get-config-list', getConfigList(script, null));
 });
 
 ipcMain.on('get-scripts', async (event) => {
@@ -99,6 +101,39 @@ ipcMain.on('get-scripts', async (event) => {
   });
   const { scripts } = JSON.parse(data);
   event.reply('get-scripts', scripts);
+});
+
+ipcMain.on('copy-config', async (event, request) => {
+  const targetFile = `${LAZY_CONFIG_DIR}/${request.newName}.json`;
+  let status = false;
+  if (!fs.existsSync(targetFile)) {
+    fs.copyFileSync(`${LAZY_CONFIG_DIR}/${request.name}.json`, targetFile);
+    const existingConfigs: Array<object> = getConfigList('all', null);
+    existingConfigs.push({
+      file: `${request.newName}.json`,
+      name: request.newName,
+      script: request.script,
+    });
+    const newConfig = {
+      config: existingConfigs,
+    };
+    status = writeFile(LAZY_CONFIG, newConfig);
+  }
+  event.reply('copy-config', status);
+});
+
+ipcMain.on('delete-config', async (event, request) => {
+  const targetFile = `${LAZY_CONFIG_DIR}/${request.name}.json`;
+  let status = false;
+  if (fs.existsSync(targetFile)) {
+    fs.rmSync(targetFile);
+    const existingConfigs: Array<object> = getConfigList('all', request.name);
+    const newConfig = {
+      config: existingConfigs,
+    };
+    status = writeFile(LAZY_CONFIG, newConfig);
+  }
+  event.reply('delete-config', status);
 });
 
 ipcMain.on('save-config', async (event, request) => {
@@ -122,7 +157,7 @@ ipcMain.on('create-config', async (event, request) => {
       `${LAZY_CONFIG_SCRIPTS_BASE}/${request.config}`,
       targetFile
     );
-    const existingConfigs: Array<object> = getConfigList('all');
+    const existingConfigs: Array<object> = getConfigList('all', null);
     existingConfigs.push({
       file: `${request.name}.json`,
       name: request.name,

@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('electron', {
     sendGetConfig(fileName: string) {
       ipcRenderer.send('get-config', fileName);
     },
+    sendCopyConfig(request: object) {
+      ipcRenderer.send('copy-config', request);
+    },
+    sendDeleteConfig(request: object) {
+      ipcRenderer.send('delete-config', request);
+    },
     on(channel: string, func: (...args: unknown[]) => void) {
       const validChannels = [
         'ipc-example',
@@ -28,6 +34,8 @@ contextBridge.exposeInMainWorld('electron', {
         'get-scripts',
         'create-config',
         'save-config',
+        'copy-config',
+        'delete-config',
       ];
       if (validChannels.includes(channel)) {
         const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
@@ -48,6 +56,8 @@ contextBridge.exposeInMainWorld('electron', {
         'get-scripts',
         'create-config',
         'save-config',
+        'copy-config',
+        'delete-config',
       ];
       if (validChannels.includes(channel)) {
         // Deliberately strip event as it includes `sender`

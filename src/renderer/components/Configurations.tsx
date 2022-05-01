@@ -9,12 +9,23 @@ import {
   Nav,
   Tabs,
   Tab,
+  Tooltip,
+  OverlayTrigger,
 } from 'react-bootstrap';
 import { LazyContext } from 'renderer/context/LazyContextProvider';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import { FaPlay, FaPlus, FaCogs, FaSave } from 'react-icons/fa';
+import {
+  FaPlay,
+  FaPlus,
+  FaCogs,
+  FaSave,
+  FaCopy,
+  FaTrash,
+  FaCog,
+} from 'react-icons/fa';
 import DataGrid, { TextEditor } from 'react-data-grid';
+import ReactTooltip from 'react-tooltip';
 import ConfigList from './configs/ConfigList';
 import CreateNewConfig from './CreateNewConfig';
 
@@ -29,6 +40,8 @@ const Configurations = () => {
   const { unSaved, setUnSaved } = useContext(LazyContext);
   const { filterScript, setFilterScript } = useContext(LazyContext);
   const [envRows, setEnvRows] = useState([]);
+  const [enableEdit, setEnableEdit] = useState(false);
+  const { triggerReload, setTriggerReload } = useContext(LazyContext);
 
   const assignFormData = (configs: []) => {
     const clonedFormData = {};
@@ -40,6 +53,7 @@ const Configurations = () => {
 
   const assignEnvironment = (environment: {}) => {
     if (!environment) {
+      setEnvRows([]);
       return;
     }
     const rows: Array = [];
@@ -58,7 +72,7 @@ const Configurations = () => {
     }
     const result: Object = {};
     environment.forEach((row) => {
-      result[row.name] = result[row.value];
+      result[row.name] = row.value;
     });
     return result;
   };
@@ -70,6 +84,7 @@ const Configurations = () => {
       assignFormData(arg.config);
       assignEnvironment(arg.environment);
       setConfigDetail(arg);
+      setEnableEdit(true);
     });
     window.electron.ipcRenderer.sendGetConfig(currentConfig.file);
   }, [currentConfig]);
@@ -78,16 +93,16 @@ const Configurations = () => {
     window.electron.ipcRenderer.once('get-scripts', (arg) => {
       // eslint-disable-next-line no-console
       setScripts(arg);
-      console.log(arg);
     });
     window.electron.ipcRenderer.sendGetScripts();
   }, []);
 
   const handleSubmit = () => {
-    if (!unSaved) {
+    if (JSON.stringify(formData) == '{}') {
       return;
     }
-    if (JSON.stringify(formData) == '{}') {
+    if (!unSaved) {
+      MySwal.fire('No Changes to save', '', 'info');
       return;
     }
     const request = {
@@ -195,6 +210,96 @@ const Configurations = () => {
     handleSubmit();
   }, [triggerSave]);
 
+  const renderTooltip = (props) => {
+    return <Tooltip id="button-tooltip">Simple tooltip</Tooltip>;
+  };
+  const sendCopyConfig = (name) => {
+    const request = JSON.parse(JSON.stringify(currentConfig));
+    request.newName = name;
+    window.electron.ipcRenderer.once('copy-config', (status) => {
+      if (status) {
+        MySwal.fire('Copied!', '', 'success');
+        setTriggerReload(triggerReload + 1);
+      } else {
+        MySwal.fire('Error!', 'Invalid name or name already exists', 'error');
+      }
+    });
+    window.electron.ipcRenderer.sendCopyConfig(request);
+  };
+  const copyConfig = () => {
+    if (!configDetail) {
+      MySwal.fire('Choose a configuration to copy', '', 'info');
+      return;
+    }
+    MySwal.fire({
+      title: 'Copy Configuration',
+      input: 'text',
+      inputLabel: 'Config new name',
+      inputPlaceholder: 'Enter new configuration name',
+      inputValue: `${currentConfig.name}-Copy`,
+    })
+      .then((result) => {
+        if (result.isConfirmed) {
+          sendCopyConfig(result.value);
+        }
+        return result;
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  };
+
+  const handleCopyConfig = () => {
+    if (unSaved) {
+      showSaveChange((result) => {
+        if (result.isConfirmed) {
+          handleSubmit();
+          copyConfig();
+        } else if (result.isDenied) {
+          setUnSaved(false);
+          copyConfig();
+        }
+        return true;
+      });
+    } else {
+      copyConfig();
+    }
+  };
+
+  const handleDelete = () => {
+    if (!configDetail) {
+      MySwal.fire('Choose a configuration to delete', '', 'info');
+      return;
+    }
+    MySwal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#0b5ed7',
+      confirmButtonText: 'Yes, delete it!',
+    })
+      .then((result) => {
+        if (result.isConfirmed) {
+          window.electron.ipcRenderer.once('delete-config', (status) => {
+            if (status) {
+              MySwal.fire('Deleted!', 'Your file has been deleted.', 'success');
+              setTriggerReload(triggerReload + 1);
+              setConfigDetail(null);
+            } else {
+              MySwal.fire('Error!', 'Unable to delete', 'error');
+            }
+          });
+          window.electron.ipcRenderer.sendDeleteConfig(currentConfig);
+        }
+        return result;
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  };
+
   const createOptions = (value: Object, index: number) => {
     return (
       <>
@@ -225,20 +330,37 @@ const Configurations = () => {
           >
             <Button
               style={{ width: '39px', height: '39px', marginRight: '8px' }}
-              variant="light"
+              variant="outline-secondary"
+              id="createNew"
               onClick={handleCreateNew}
             >
               <FaPlus />
             </Button>
             <Button
               style={{ width: '39px', height: '39px', marginRight: '8px' }}
-              variant="success"
+              variant="outline-secondary"
+              disabled={!enableEdit}
+              onClick={handleCopyConfig}
+            >
+              <FaCopy />
+            </Button>
+            <Button
+              style={{ width: '39px', height: '39px', marginRight: '8px' }}
+              variant="outline-danger"
+              disabled={!enableEdit}
+              onClick={handleDelete}
+            >
+              <FaTrash />
+            </Button>
+            <Button
+              style={{ width: '39px', height: '39px', marginRight: '8px' }}
+              variant="outline-success"
             >
               <FaPlay />
             </Button>
             <Button
               style={{ width: '39px', height: '39px' }}
-              variant="primary"
+              variant="outline-primary"
               onClick={handleSubmit}
             >
               <FaSave />
@@ -266,7 +388,23 @@ const Configurations = () => {
           ) : (
             <>
               <h4>
+                <FaCog
+                  style={{
+                    fontSize: '16px',
+                    marginRight: '8px',
+                    fontStyle: 'italic',
+                  }}
+                />
                 {currentConfig.name}
+                <span
+                  style={{
+                    fontSize: '16px',
+                    marginLeft: '8px',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  ({currentConfig.script})
+                </span>
                 {unSaved && <span style={{ color: 'red' }}> *</span>}
               </h4>
               <Tabs
@@ -295,7 +433,11 @@ const Configurations = () => {
                   <DataGrid
                     columns={columns}
                     rows={envRows}
-                    onRowsChange={setEnvRows}
+                    onRowsChange={(event) => {
+                      console.log(event);
+                      setEnvRows(event);
+                      setUnSaved(true);
+                    }}
                   />
                 </Tab>
               </Tabs>

@@ -8,6 +8,8 @@ declare global {
         sendGetScripts(): void;
         createConfigIpc(request: object): void;
         sendSaveConfigDetail(request: object): void;
+        sendCopyConfig(request: object): void;
+        sendDeleteConfig(request: object): void;
         on(
           channel: string,
           func: (...args: unknown[]) => void
