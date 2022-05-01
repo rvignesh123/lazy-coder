@@ -8,11 +8,27 @@ contextBridge.exposeInMainWorld('electron', {
     sendGetConfigList(scriptType: string) {
       ipcRenderer.send('get-config-list', scriptType);
     },
+    sendGetScripts() {
+      ipcRenderer.send('get-scripts');
+    },
+    createConfigIpc(request: object) {
+      ipcRenderer.send('create-config', request);
+    },
+    sendSaveConfigDetail(request: object) {
+      ipcRenderer.send('save-config', request);
+    },
     sendGetConfig(fileName: string) {
       ipcRenderer.send('get-config', fileName);
     },
     on(channel: string, func: (...args: unknown[]) => void) {
-      const validChannels = ['ipc-example', 'get-config-list', 'get-config'];
+      const validChannels = [
+        'ipc-example',
+        'get-config-list',
+        'get-config',
+        'get-scripts',
+        'create-config',
+        'save-config',
+      ];
       if (validChannels.includes(channel)) {
         const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
           func(...args);
@@ -25,7 +41,14 @@ contextBridge.exposeInMainWorld('electron', {
       return undefined;
     },
     once(channel: string, func: (...args: unknown[]) => void) {
-      const validChannels = ['ipc-example', 'get-config-list', 'get-config'];
+      const validChannels = [
+        'ipc-example',
+        'get-config-list',
+        'get-config',
+        'get-scripts',
+        'create-config',
+        'save-config',
+      ];
       if (validChannels.includes(channel)) {
         // Deliberately strip event as it includes `sender`
         ipcRenderer.once(channel, (_event, ...args) => func(...args));

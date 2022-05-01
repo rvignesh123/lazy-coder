@@ -29,15 +29,11 @@ let mainWindow: BrowserWindow | null = null;
 const LAZY_CODER_DIR = `${require('os').homedir()}/.lazycoder`;
 
 const LAZY_CONFIG = `${LAZY_CODER_DIR}/config.json`;
+const LAZY_CONFIG_SCRIPTS = `${LAZY_CODER_DIR}/scripts.json`;
+const LAZY_CONFIG_SCRIPTS_BASE = `${LAZY_CODER_DIR}/base`;
 const LAZY_CONFIG_DIR = `${LAZY_CODER_DIR}/configs`;
 
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
-
-ipcMain.on('get-config-list', async (event, script) => {
+const getConfigList = (script) => {
   const data = fs.readFileSync(LAZY_CONFIG, { encoding: 'utf8', flag: 'r' });
   const configs = JSON.parse(data).config;
   const filtered: any[] = [];
@@ -46,17 +42,99 @@ ipcMain.on('get-config-list', async (event, script) => {
       filtered.push(element);
     }
   });
-  console.log(filtered);
-  event.reply('get-config-list', filtered);
+  return filtered;
+};
+
+const getConfigDetail = (fileName: string) => {
+  if (fs.existsSync(`${LAZY_CONFIG_DIR}/${fileName}`)) {
+    const data = fs.readFileSync(`${LAZY_CONFIG_DIR}/${fileName}`, {
+      encoding: 'utf8',
+      flag: 'r',
+    });
+    console.log(`Reading File : ${fileName}`);
+    console.log(data);
+    return JSON.parse(data);
+  }
+  return null;
+};
+
+const writeFile = (file: string, newConfig: object) => {
+  try {
+    fs.writeFileSync(file, JSON.stringify(newConfig), {
+      encoding: 'utf8',
+      flag: 'w',
+    });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const getUpdatedConfigDetail = (
+  configList: Array<object>,
+  formData: object
+) => {
+  const updatedList: Array<object> = [];
+  configList.forEach((value) => {
+    value.value = formData[value.name];
+    updatedList.push(value);
+  });
+  return updatedList;
+};
+
+ipcMain.on('ipc-example', async (event, arg) => {
+  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
+  console.log(msgTemplate(arg));
+  event.reply('ipc-example', msgTemplate('pong'));
 });
 
-ipcMain.on('get-config', async (event, fileName) => {
-  const data = fs.readFileSync(`${LAZY_CONFIG_DIR}/${fileName}`, {
+ipcMain.on('get-config-list', async (event, script) => {
+  event.reply('get-config-list', getConfigList(script));
+});
+
+ipcMain.on('get-scripts', async (event) => {
+  const data = fs.readFileSync(LAZY_CONFIG_SCRIPTS, {
     encoding: 'utf8',
     flag: 'r',
   });
-  console.log(`Reading File : ${fileName}`);
-  event.reply('get-config', JSON.parse(data));
+  const { scripts } = JSON.parse(data);
+  event.reply('get-scripts', scripts);
+});
+
+ipcMain.on('save-config', async (event, request) => {
+  const targetFile = `${LAZY_CONFIG_DIR}/${request.currentConfig.file}`;
+  const configDetail = getConfigDetail(request.currentConfig.file);
+  const updatedList = getUpdatedConfigDetail(
+    configDetail.config,
+    request.formData
+  );
+  const status: boolean = writeFile(targetFile, { config: updatedList });
+  event.reply('save-config', status);
+});
+ipcMain.on('create-config', async (event, request) => {
+  const targetFile = `${LAZY_CONFIG_DIR}/${request.name}.json`;
+  let status = false;
+  if (!fs.existsSync(targetFile)) {
+    fs.copyFileSync(
+      `${LAZY_CONFIG_SCRIPTS_BASE}/${request.config}`,
+      targetFile
+    );
+    const existingConfigs: Array<object> = getConfigList('all');
+    existingConfigs.push({
+      file: `${request.name}.json`,
+      name: request.name,
+      script: request.script,
+    });
+    const newConfig = {
+      config: existingConfigs,
+    };
+    status = writeFile(LAZY_CONFIG, newConfig);
+  }
+  event.reply('create-config', status);
+});
+
+ipcMain.on('get-config', async (event, fileName) => {
+  event.reply('get-config', getConfigDetail(fileName));
 });
 
 if (process.env.NODE_ENV === 'production') {
