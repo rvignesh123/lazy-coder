@@ -24,10 +24,12 @@ import {
   FaTrash,
   FaCog,
 } from 'react-icons/fa';
+import { GiBison, GiBuffaloHead } from 'react-icons/gi';
 import DataGrid, { TextEditor } from 'react-data-grid';
 import ReactTooltip from 'react-tooltip';
 import ConfigList from './configs/ConfigList';
 import CreateNewConfig from './CreateNewConfig';
+import NotFound from '../../../assets/NotFound.png';
 
 const Configurations = () => {
   const MySwal = withReactContent(Swal);
@@ -149,16 +151,28 @@ const Configurations = () => {
 
   const showEmptyConfig = () => {
     return (
-      <>
-        <Button
-          variant="primary"
-          onClick={() => {
-            setShowCreateConfig(true);
-          }}
-        >
-          Create New Configuration
-        </Button>
-      </>
+      <Container fluid>
+        <Row>
+          <img
+            src={NotFound}
+            style={{ width: '400px', height: '320px', margin: 'auto' }}
+          />
+          <h6 style={{ color: 'grey', textAlign: 'center' }}>
+            Please choose any configuration or you can create new
+          </h6>
+        </Row>
+        <Row>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowCreateConfig(true);
+            }}
+            style={{ width: '240px', margin: 'auto' }}
+          >
+            Create New Configuration
+          </Button>
+        </Row>
+      </Container>
     );
   };
   const renderConfigDetail = (configs: []) => {
@@ -431,6 +445,7 @@ const Configurations = () => {
                     <FaPlus />
                   </Button>
                   <DataGrid
+                    style={{ height: 'calc(100vh - 280px)' }}
                     columns={columns}
                     rows={envRows}
                     onRowsChange={(event) => {

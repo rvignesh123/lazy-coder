@@ -1,11 +1,15 @@
-import { Navbar, Nav } from "react-bootstrap";
-import { LinkContainer } from "react-router-bootstrap";
+import { Navbar, Nav } from 'react-bootstrap';
+import { GiBison } from 'react-icons/gi';
+import { LinkContainer } from 'react-router-bootstrap';
 
 const Header = () => {
   return (
     <Navbar bg="light" expand="lg">
       <LinkContainer to="/">
-        <Navbar.Brand>Lazy Coder</Navbar.Brand>
+        <Navbar.Brand>
+          <GiBison style={{ fontSize: '36px' }} />
+          Lazy Coder
+        </Navbar.Brand>
       </LinkContainer>
       <Navbar.Toggle aria-controls="basic-navbar-nav" />
       <Navbar.Collapse id="basic-navbar-nav">

@@ -53,8 +53,6 @@ const getConfigDetail = (fileName: string) => {
       encoding: 'utf8',
       flag: 'r',
     });
-    console.log(`Reading File : ${fileName}`);
-    console.log(data);
     return JSON.parse(data);
   }
   return null;

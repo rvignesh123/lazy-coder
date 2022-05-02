@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Navbar, Nav, ListGroup, Form } from 'react-bootstrap';
+import { Navbar, Nav, ListGroup, Form, Col } from 'react-bootstrap';
 import { LazyContext } from 'renderer/context/LazyContextProvider';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -12,6 +12,7 @@ const ConfigList = () => {
   const { unSaved, setUnSaved } = useContext(LazyContext);
   const { filterScript, setFilterScript } = useContext(LazyContext);
   const { triggerSave, setTriggerSave } = useContext(LazyContext);
+  const { activeIndex, setActiveIndex } = useContext(LazyContext);
   const handleListClick = (value) => {
     if (!unSaved) {
       setCurrentConfig(value);
@@ -59,16 +60,24 @@ const ConfigList = () => {
 
   const loadList = (value: Object, index: number) => {
     return (
-      <ListGroup.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="link-1" onClick={() => handleListClick(value)}>
-            {value.name}
-          </Nav.Link>
-        </Nav.Item>
-      </ListGroup.Item>
+      <Nav.Item class={activeIndex === index ? 'active-config-item' : ''}>
+        <Nav.Link
+          eventKey="link-1"
+          onClick={() => {
+            handleListClick(value);
+            setActiveIndex(index);
+          }}
+        >
+          {value.name}
+        </Nav.Link>
+      </Nav.Item>
     );
   };
-  return <>{configList.map((value, index) => loadList(value, index))}</>;
+  return (
+    <Col id="config-list">
+      {configList.map((value, index) => loadList(value, index))}
+    </Col>
+  );
 };
 
 export default ConfigList;
