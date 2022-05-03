@@ -13,6 +13,8 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import * as fs from 'fs';
+import os from 'os';
+
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
@@ -27,9 +29,12 @@ export default class AppUpdater {
 let mainWindow: BrowserWindow | null = null;
 
 const LAZY_CODER_DIR = `${require('os').homedir()}/.lazycoder`;
+const pty = require('node-pty');
 
 const LAZY_CONFIG = `${LAZY_CODER_DIR}/config.json`;
+const LAZY_CONFIG_RUNWAY = `${LAZY_CODER_DIR}/.runway`;
 const LAZY_CONFIG_SCRIPTS = `${LAZY_CODER_DIR}/scripts.json`;
+const LAZY_CONFIG_SCRIPTS_DIR = `${LAZY_CODER_DIR}/scripts`;
 const LAZY_CONFIG_SCRIPTS_BASE = `${LAZY_CODER_DIR}/base`;
 const LAZY_CONFIG_DIR = `${LAZY_CODER_DIR}/configs`;
 
@@ -81,6 +86,49 @@ const getUpdatedConfigDetail = (
   });
   return updatedList;
 };
+const getScripts = () => {
+  const data = fs.readFileSync(LAZY_CONFIG_SCRIPTS, {
+    encoding: 'utf8',
+    flag: 'r',
+  });
+  const { scripts } = JSON.parse(data);
+  return scripts;
+};
+const getScriptDetail = (name: string) => {
+  const scripts: Array<object> = getScripts();
+  for (let i = 0; i < scripts.length; i++) {
+    if (scripts[i].name === name) {
+      return scripts[i];
+    }
+  }
+  return null;
+};
+
+const getArguments = (args: string) => {
+  return args.split(' ');
+};
+
+const getInputFile = (formData: object) => {
+  const inputFile = `${Date.now()}.properties`;
+  const targetFile = `${LAZY_CONFIG_RUNWAY}/${inputFile}`;
+  let fileContent = '';
+  Object.keys(formData).forEach((key) => {
+    fileContent += `${key}=${formData[key]}\n`;
+  });
+  fs.writeFileSync(targetFile, fileContent, {
+    encoding: 'utf8',
+    flag: 'w',
+  });
+  return inputFile;
+};
+
+const getAsArgs = (formData: object) => {
+  const args: Array<string> = [];
+  Object.keys(formData).forEach((key) => {
+    args.push(formData[key]);
+  });
+  return args;
+};
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -88,17 +136,52 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
+ipcMain.on('start-process', async (event, request) => {
+  const scriptDetail = getScriptDetail(request.currentConfig.script);
+  if (scriptDetail == null) {
+    // impossible -> it should return (not entered by user)
+    return null;
+  }
+  const scriptDirectory = `${LAZY_CONFIG_SCRIPTS_DIR}/${scriptDetail.name}`;
+  const scriptArgs = getArguments(scriptDetail.args);
+  const args: Array<string> = [];
+
+  scriptArgs.forEach((eachArg) => {
+    if (eachArg.indexOf('$main') !== -1) {
+      args.push(eachArg.replaceAll('$main', scriptDetail.main));
+    }
+    if (eachArg.indexOf('$input') !== -1) {
+      args.push(`..\\..\\.runway\\${getInputFile(request.formData)}`);
+    }
+    if (eachArg.indexOf('$args') !== -1) {
+      args.push(...getAsArgs(request.formData));
+    }
+  });
+  console.log(scriptDirectory);
+  console.log(scriptDetail);
+  console.log(args);
+  console.log({ ...process.env, ...request.environment });
+  const shell: string =
+    process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'];
+  console.log(shell);
+  const ptyProcess = pty.spawn('powershell.exe', args, {
+    name: request.currentConfig.name,
+    cols: 80,
+    rows: 30,
+    cwd: scriptDirectory,
+    env: { ...process.env, ...request.environment },
+  });
+  ptyProcess.onData((data) => {
+    event.reply('terminal-data', data);
+  });
+});
+
 ipcMain.on('get-config-list', async (event, script) => {
   event.reply('get-config-list', getConfigList(script, null));
 });
 
 ipcMain.on('get-scripts', async (event) => {
-  const data = fs.readFileSync(LAZY_CONFIG_SCRIPTS, {
-    encoding: 'utf8',
-    flag: 'r',
-  });
-  const { scripts } = JSON.parse(data);
-  event.reply('get-scripts', scripts);
+  event.reply('get-scripts', getScripts());
 });
 
 ipcMain.on('copy-config', async (event, request) => {
@@ -213,6 +296,14 @@ const createWindow = async () => {
 
   if (!fs.existsSync(LAZY_CODER_DIR)) {
     fs.mkdirSync(LAZY_CODER_DIR);
+  }
+  if (!fs.existsSync(LAZY_CONFIG_RUNWAY)) {
+    fs.mkdirSync(LAZY_CONFIG_RUNWAY);
+  }
+  if (!fs.existsSync(LAZY_CONFIG)) {
+    writeFile(LAZY_CONFIG, {
+      config: [],
+    });
   }
   mainWindow = new BrowserWindow({
     show: false,

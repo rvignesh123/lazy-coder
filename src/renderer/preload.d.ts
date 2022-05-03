@@ -10,6 +10,7 @@ declare global {
         sendSaveConfigDetail(request: object): void;
         sendCopyConfig(request: object): void;
         sendDeleteConfig(request: object): void;
+        startProcess(request: object): void;
         on(
           channel: string,
           func: (...args: unknown[]) => void

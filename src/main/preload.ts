@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld('electron', {
     sendDeleteConfig(request: object) {
       ipcRenderer.send('delete-config', request);
     },
+    startProcess(request: object) {
+      ipcRenderer.send('start-process', request);
+    },
     on(channel: string, func: (...args: unknown[]) => void) {
       const validChannels = [
         'ipc-example',
@@ -36,6 +39,7 @@ contextBridge.exposeInMainWorld('electron', {
         'save-config',
         'copy-config',
         'delete-config',
+        'start-process',
       ];
       if (validChannels.includes(channel)) {
         const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
@@ -58,6 +62,7 @@ contextBridge.exposeInMainWorld('electron', {
         'save-config',
         'copy-config',
         'delete-config',
+        'start-process',
       ];
       if (validChannels.includes(channel)) {
         // Deliberately strip event as it includes `sender`

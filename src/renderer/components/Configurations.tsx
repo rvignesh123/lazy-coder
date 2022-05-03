@@ -27,6 +27,7 @@ import {
 import { GiBison, GiBuffaloHead } from 'react-icons/gi';
 import DataGrid, { TextEditor } from 'react-data-grid';
 import ReactTooltip from 'react-tooltip';
+import { useNavigate } from 'react-router';
 import ConfigList from './configs/ConfigList';
 import CreateNewConfig from './CreateNewConfig';
 import NotFound from '../../../assets/NotFound.png';
@@ -44,7 +45,48 @@ const Configurations = () => {
   const [envRows, setEnvRows] = useState([]);
   const [enableEdit, setEnableEdit] = useState(false);
   const { triggerReload, setTriggerReload } = useContext(LazyContext);
+  const { tabs, setTabs } = useContext(LazyContext);
+  const { activeTab, setActiveTab } = useContext(LazyContext);
+  const navigate = useNavigate();
 
+  const savableEnvironment = (environment: []) => {
+    if (!environment) {
+      return {};
+    }
+    const result: Object = {};
+    environment.forEach((row) => {
+      result[row.name] = row.value;
+    });
+    return result;
+  };
+
+  const startProcess = () => {
+    const request = {
+      currentConfig,
+      formData,
+      environment: savableEnvironment(envRows),
+    };
+    window.electron.ipcRenderer.startProcess(request);
+  };
+
+  const createTerminalTab = (tabData) => {
+    tabs.push(tabData);
+    setTabs(tabs);
+    setActiveTab(tabs.length - 1);
+    startProcess();
+    navigate('/');
+  };
+
+  const handlePlayEvent = () => {
+    if (configDetail) {
+      createTerminalTab({
+        title: currentConfig.name,
+        data: '',
+      });
+    } else {
+      MySwal.fire('Please choose a config to Run', '', 'info');
+    }
+  };
   const assignFormData = (configs: []) => {
     const clonedFormData = {};
     configs.forEach((value) => {
@@ -68,17 +110,6 @@ const Configurations = () => {
     setEnvRows(rows);
   };
 
-  const savableEnvironment = (environment: []) => {
-    if (!environment) {
-      return {};
-    }
-    const result: Object = {};
-    environment.forEach((row) => {
-      result[row.name] = row.value;
-    });
-    return result;
-  };
-
   useEffect(() => {
     console.log('Found changes in config');
     window.electron.ipcRenderer.once('get-config', (arg) => {
@@ -100,7 +131,7 @@ const Configurations = () => {
   }, []);
 
   const handleSubmit = () => {
-    if (JSON.stringify(formData) == '{}') {
+    if (Object.keys(formData).length === 0) {
       return;
     }
     if (!unSaved) {
@@ -344,7 +375,7 @@ const Configurations = () => {
           >
             <Button
               style={{ width: '39px', height: '39px', marginRight: '8px' }}
-              variant="outline-secondary"
+              variant="secondary"
               id="createNew"
               onClick={handleCreateNew}
             >
@@ -352,7 +383,7 @@ const Configurations = () => {
             </Button>
             <Button
               style={{ width: '39px', height: '39px', marginRight: '8px' }}
-              variant="outline-secondary"
+              variant="secondary"
               disabled={!enableEdit}
               onClick={handleCopyConfig}
             >
@@ -360,7 +391,7 @@ const Configurations = () => {
             </Button>
             <Button
               style={{ width: '39px', height: '39px', marginRight: '8px' }}
-              variant="outline-danger"
+              variant="secondary"
               disabled={!enableEdit}
               onClick={handleDelete}
             >
@@ -368,13 +399,14 @@ const Configurations = () => {
             </Button>
             <Button
               style={{ width: '39px', height: '39px', marginRight: '8px' }}
-              variant="outline-success"
+              variant="success"
+              onClick={handlePlayEvent}
             >
               <FaPlay />
             </Button>
             <Button
               style={{ width: '39px', height: '39px' }}
-              variant="outline-primary"
+              variant="primary"
               onClick={handleSubmit}
             >
               <FaSave />
