@@ -157,17 +157,11 @@ ipcMain.on('start-process', async (event, request) => {
       args.push(...getAsArgs(request.formData));
     }
   });
-  console.log(scriptDirectory);
-  console.log(scriptDetail);
-  console.log(args);
-  console.log({ ...process.env, ...request.environment });
-  const shell: string =
-    process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'];
-  console.log(shell);
-  const ptyProcess = pty.spawn('powershell.exe', args, {
+
+  const ptyProcess = pty.spawn(scriptDetail.executable, args, {
     name: request.currentConfig.name,
-    cols: 80,
-    rows: 30,
+    cols: 120,
+    rows: 120,
     cwd: scriptDirectory,
     env: { ...process.env, ...request.environment },
   });

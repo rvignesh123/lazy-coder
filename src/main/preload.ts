@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld('electron', {
         'save-config',
         'copy-config',
         'delete-config',
-        'start-process',
+        'terminal-data',
       ];
       if (validChannels.includes(channel)) {
         const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
@@ -63,6 +63,7 @@ contextBridge.exposeInMainWorld('electron', {
         'copy-config',
         'delete-config',
         'start-process',
+        'terminal-data',
       ];
       if (validChannels.includes(channel)) {
         // Deliberately strip event as it includes `sender`

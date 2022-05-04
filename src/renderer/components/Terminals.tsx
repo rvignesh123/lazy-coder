@@ -14,6 +14,19 @@ const Terminals = () => {
   const fitAddon = new FitAddon();
   const xtermRef = useRef(null);
 
+  const write = (line: string) => {
+    if (tabs[activeTab]) {
+      tabs[activeTab].data += line;
+      setTabs(JSON.parse(JSON.stringify(tabs)));
+    }
+    if (xtermRef) {
+      if (xtermRef.current) {
+        if (xtermRef.current.terminal) {
+          xtermRef.current.terminal.write(line);
+        }
+      }
+    }
+  };
   const writeLine = (line: string) => {
     if (xtermRef) {
       if (xtermRef.current) {
@@ -41,7 +54,7 @@ const Terminals = () => {
 
   useEffect(() => {
     window.electron.ipcRenderer.on('terminal-data', (data) => {
-      xtermRef.current.terminal.write(data);
+      write(data);
     });
   }, []);
 
